@@ -28,15 +28,17 @@ monotonic_time_ms() ->
     erlang:nif_error({error, not_loaded}).
 
 init() ->
-    case code:priv_dir(riak_ensemble) of
-        {error, bad_name} ->
-            case code:which(?MODULE) of
-                Filename when is_list(Filename) ->
-                    SoName = filename:join([filename:dirname(Filename),"../priv", "riak_ensemble"]);
-                _ ->
-                    SoName = filename:join("../priv", "riak_ensemble")
-            end;
-        Dir ->
-            SoName = filename:join(Dir, "riak_ensemble")
-    end,
-    erlang:load_nif(SoName, 0).
+  Path = case application:get_env(code,sopath) of
+           {ok, CodePath} ->
+             CodePath;
+           _ ->
+             case code:priv_dir(?MODULE) of
+               {error, _} ->
+                 EbinDir = filename:dirname(code:which(?MODULE)),
+                 AppPath = filename:dirname(EbinDir),
+                 filename:join(AppPath, "priv");
+               CodePath ->
+                 CodePath
+             end
+         end,
+  erlang:load_nif(filename:join(Path, ?MODULE), 0).
